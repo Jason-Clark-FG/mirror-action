@@ -69,7 +69,7 @@ git remote add ${REMOTE_NAME} "${REMOTE}"
 
 if [[ "${INPUT_PUSH_ALL_REFS}" != "false" ]]; then
     # Batch pushing logic
-    remote_branches=$(git branch -r | grep origin/ | awk '{print $1}' | sed 's/origin\///')
+    remote_branches=($(git branch -r | awk '/origin\//{gsub(/origin\//,"");print $1}'))
 
     for i in $(seq 0 $((${#remote_branches[@]} - 1))); do
         branch=${remote_branches[$i]}
