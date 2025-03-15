@@ -19,6 +19,8 @@ GIT_SSH_KNOWN_HOSTS=${INPUT_GIT_SSH_KNOWN_HOSTS}
 HAS_CHECKED_OUT="$(git rev-parse --is-inside-work-tree 2>/dev/null || /bin/true)"
 BRANCH_BATCH_SIZE=${INPUT_BRANCH_BATCH_SIZE:-50}
 PUSH_TAGS=${INPUT_PUSH_TAGS:-true}
+BATCH_SLEEP_INTERVAL=${INPUT_BATCH_SLEEP_INTERVAL:-5}
+FAILED_BRANCHES=()
 
 if [[ "${HAS_CHECKED_OUT}" != "true" ]]; then
     echo "WARNING: repo not checked out; attempting checkout" > /dev/stderr
@@ -78,9 +80,25 @@ if [[ "${INPUT_PUSH_ALL_REFS}" != "false" ]]; then
         fi
         batch+=("refs/remotes/origin/$branch:refs/heads/$branch")
         if (( $i % $BRANCH_BATCH_SIZE == $(($BRANCH_BATCH_SIZE - 1)) || $i == $((${#remote_branches[@]} - 1)) )); then
-            eval git push ${GIT_PUSH_ARGS} ${REMOTE_NAME} "${batch[@]}"
+            if ! eval git push ${GIT_PUSH_ARGS} ${REMOTE_NAME} "${batch[@]}"; then
+                # Capture failed branch names
+                for failed_ref in "${batch[@]}"; do
+                    failed_branch=$(echo "$failed_ref" | awk -F':' '{print $2}')
+                    FAILED_BRANCHES+=("$failed_branch")
+                done
+            fi
+            sleep $BATCH_SLEEP_INTERVAL
         fi
     done
+    # Retry failed branches
+    if [[ ${#FAILED_BRANCHES[@]} -gt 0 ]]; then
+        echo "Retrying failed branches: ${FAILED_BRANCHES[@]}"
+        for failed_branch in "${FAILED_BRANCHES[@]}"; do
+            if ! eval git push ${GIT_PUSH_ARGS} ${REMOTE_NAME} "refs/remotes/origin/$(echo $failed_branch | sed 's/refs\/heads\///'):$failed_branch"; then
+                echo "Failed to retry branch: $failed_branch"
+            fi
+        done
+    fi
     # Push tags separately after branches, if configured.
     if [[ "${PUSH_TAGS}" == "true" ]]; then
         eval git push ${GIT_PUSH_ARGS} ${REMOTE_NAME} --tags

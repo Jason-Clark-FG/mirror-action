@@ -46,6 +46,10 @@ inputs:
     description: "The number of branches to push at a time"
     default: 50
     required: false
+  BATCH_SLEEP_INTERVAL:
+    description: "The amount of time in seconds to sleep between batches"
+    default: 5
+    required: false
   PUSH_TAGS:
     description: "Whether to push tags or not"
     default: "true"
