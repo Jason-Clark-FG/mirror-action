@@ -40,13 +40,20 @@ inputs:
     required: false
   GIT_PUSH_ARGS:
     description: "The arguments to use when pushing the repository"
-    default: '--tags --force --prune'
+    default: '--force --prune'
+    required: false
+  BRANCH_BATCH_SIZE:
+    description: "The number of branches to push at a time"
+    default: 50
+    required: false
+  PUSH_TAGS:
+    description: "Whether to push tags or not"
+    default: "true"
     required: false
   DEBUG:
     description: 'set to "true" to enable debug mode'
     default: "false"
     required: false
-
 
 runs:
   using: 'docker'
